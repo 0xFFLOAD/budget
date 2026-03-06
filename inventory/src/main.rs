@@ -151,11 +151,6 @@ impl Config {
         if let Some(parent) = std::path::Path::new(&cfg.database.path).parent() {
             let _ = std::fs::create_dir_all(parent);
         }
-        // tor may be disabled if the target site blocks access over it;
-        // we only emit a warning here, the caller will decide whether to proceed.
-        if !cfg.tor.enabled {
-            log::warn!("TOR proxy disabled – HTTP requests will go direct");
-        }
         Ok(cfg)
     }
 }
