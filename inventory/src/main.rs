@@ -1,8 +1,7 @@
 use anyhow::{Context, Result, anyhow};
 use chrono::Utc;
 use log::{error, info};
-use reqwest::Client;
-use reqwest::blocking::Client as BlockingClient;
+use reqwest::blocking::Client;
 use scraper::{Html, Selector};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
@@ -237,18 +236,18 @@ impl SeleniumDriver {
         Ok(SeleniumDriver { client, last_url: None })
     }
 
-    async fn navigate(&mut self, url: &str) -> Result<()> {
+    fn navigate(&mut self, url: &str) -> Result<()> {
         self.last_url = Some(url.to_string());
         Ok(())
     }
 
-    async fn extract_products(&self) -> Result<Vec<Product>> {
+    fn extract_products(&self) -> Result<Vec<Product>> {
         let url = self
             .last_url
             .as_ref()
             .context("no URL has been navigated to")?;
-        let resp = self.client.get(url).send().await?;
-        let html = resp.text().await?;
+        let resp = self.client.get(url).send()?;
+        let html = resp.text()?;
         let fragment = Html::parse_document(&html);
         let selector = Selector::parse(".product-card").unwrap_or_else(|_| Selector::parse("*").unwrap());
         let price_selector = Selector::parse(".price").unwrap_or_else(|_| Selector::parse("*").unwrap());
@@ -310,17 +309,17 @@ struct Scraper {
 }
 
 impl Scraper {
-    async fn new(cfg: Config) -> Result<Self> {
+    fn new(cfg: Config) -> Result<Self> {
         let db = Database::init(&cfg.database.path)?;
         let driver = SeleniumDriver::new(&cfg.selenium)?;
         Ok(Scraper { cfg, db, driver })
     }
 
-    async fn run(&mut self) -> Result<()> {
+    fn run(&mut self) -> Result<()> {
         for cat in &self.cfg.scraping.categories {
             let url = format!("{}/category/{}", self.cfg.general.url, cat);
-            self.driver.navigate(&url).await?;
-            let products = self.driver.extract_products().await?;
+            self.driver.navigate(&url)?;
+            let products = self.driver.extract_products()?;
             // early validation/serialization
             // ensure data directory exists
             let _ = fs::create_dir_all("data");
@@ -401,36 +400,29 @@ fn main() -> SResult<()> {
         return Ok(());
     }
 
-    // create a Tokio runtime for the remaining async commands
-    let rt = tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()
-        .map_err(|e| ScraperError::Other(e.to_string()))?;
+    let mut scraper = Scraper::new(cfg)?;
 
-    rt.block_on(async move {
-        let mut scraper = Scraper::new(cfg).await?;
-
-        match args.command.as_str() {
-            "scrape" => {
-                info!("starting scrape loop");
-                scraper.run().await?;
-            }
-            "dump-json" => {
-                let path = args.arg.as_deref().unwrap_or("data/dump.json");
-                let _ = fs::create_dir_all("data");
-                scraper.db.export_json(path)?;
-                info!("exported products to {}", path);
-            }
-            "load-json" => {
-                let path = args.arg.as_deref().unwrap_or("data/dump.json");
-                scraper.db.import_json(path)?;
-                info!("imported products from {}", path);
-            }
-            other => {
-                error!("unknown command: {}", other);
-                eprintln!("usage: <init|scrape|dump-json|load-json> [path]");
-            }
+    match args.command.as_str() {
+        "scrape" => {
+            info!("starting scrape loop");
+            scraper.run()?;
         }
-        Ok(())
-    })
+        "dump-json" => {
+            let path = args.arg.as_deref().unwrap_or("data/dump.json");
+            let _ = fs::create_dir_all("data");
+            scraper.db.export_json(path)?;
+            info!("exported products to {}", path);
+        }
+        "load-json" => {
+            let path = args.arg.as_deref().unwrap_or("data/dump.json");
+            scraper.db.import_json(path)?;
+            info!("imported products from {}", path);
+        }
+        other => {
+            error!("unknown command: {}", other);
+            eprintln!("usage: <init|scrape|dump-json|load-json> [path]");
+        }
+    }
+
+    Ok(())
 }
