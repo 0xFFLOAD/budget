@@ -39,6 +39,25 @@ cargo build --release
 # initialize the database once
 cargo run -- init
 
+# install java
+brew install openjdk@11
+
+# launch Selenium (requires Java + driver)
+# note: include the `standalone` keyword and use the proper port flag
+java -jar selenium-server-standalone.jar standalone --port 4444 &
+
+# verify listening
+curl http://localhost:4444/status
+
+# see if the tor binary is running
+pgrep -lf tor
+
+# see if port 9050 is open locally
+lsof -i TCP:9050
+
+# ask the proxy itself for a version string
+curl --socks5-hostname 127.0.0.1:9050 http://check.torproject.org/ 2>/dev/null | head -n1
+
 # run a scraping pass (Tor + Selenium must be running)
 cargo run -- scrape
 
