@@ -112,7 +112,7 @@ impl Default for Config {
                 scrape_interval: 60,
                 concurrent_requests: 5,
             },
-            tor: TorConfig { enabled: false },
+            tor: TorConfig { enabled: false }, // kept for compatibility, not used
         }
     }
 }
@@ -142,11 +142,6 @@ impl Config {
         if let Ok(val) = env::var("SHUFER_Scraper_MAX_CONCURRENT") {
             if let Ok(n) = val.parse() {
                 cfg.scraping.concurrent_requests = n;
-            }
-        }
-        if let Ok(val) = env::var("SHUFER_Scraper_TOR_ENABLED") {
-            if let Ok(b) = val.parse() {
-                cfg.tor.enabled = b;
             }
         }
         if let Ok(path) = env::var("SHUFER_Scraper_DATABASE_PATH") {
@@ -264,25 +259,13 @@ impl SeleniumDriver {
             }
         }
 
-        let mut builder = Client::builder();
-        if tor_enabled && cfg.proxy.enabled {
-            let proxy_url = format!("socks5://{}:{}", cfg.proxy.host, cfg.proxy.port);
-            debug!("using tor proxy at {}", proxy_url);
-            builder = builder.proxy(reqwest::Proxy::all(&proxy_url)?);
-        }
+        let builder = Client::builder();
         let client = builder.build()?;
 
         // create session with desired capabilities
         let mut caps = serde_json::json!({
             "capabilities": {"alwaysMatch": {"browserName": cfg.browser.clone()} }
         });
-        if tor_enabled && cfg.proxy.enabled {
-            caps["capabilities"]["alwaysMatch"]["proxy"] = serde_json::json!({
-                "proxyType": "manual",
-                "socksProxy": format!("{}:{}", cfg.proxy.host, cfg.proxy.port),
-                "socksVersion": 5
-            });
-        }
         let sess_resp = client
             .post(&format!("{}/session", base))
             .header("Content-Type", "application/json; charset=utf-8")
@@ -500,10 +483,6 @@ fn main() -> SResult<()> {
     };
 
     let cfg = Config::load().map_err(|e| ScraperError::ConfigError(e.to_string()))?;
-    if !cfg.tor.enabled {
-        // not fatal; site may not work over Tor, warn the user
-        warn!("starting with tor disabled (set SHUFER_Scraper_TOR_ENABLED=true to re-enable)");
-    }
 
     // handle _init_ without spinning an async runtime
     if args.command.as_str() == "init" {

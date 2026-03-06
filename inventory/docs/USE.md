@@ -71,6 +71,8 @@ curl --socks5-hostname 127.0.0.1:9050 http://check.torproject.org/ 2>/dev/null |
 # the browser used by Selenium is configurable – the default is `safari` on
 # macOS.  Chrome/Firefox are also supported if the appropriate WebDriver is
 # available and `SHUFER_Scraper_BROWSER` is set accordingly.
+# the `scraping.categories` array now holds language codes (e.g. "en","he").
+# the default config uses both English and Hebrew variants of the template URL.
 # to override or disable Tor you can set environment variables or edit
 # `config.json`:
 #   export SHUFER_Scraper_BROWSER=chrome

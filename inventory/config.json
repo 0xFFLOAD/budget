@@ -18,10 +18,11 @@
     "cache_size": 100
   },
   "scraping": {
-    "categories": ["dairy", "produce", "bakery"],
+    "categories": ["en", "he"],
     "scrape_interval": 60,
     "concurrent_requests": 5
   },
+
   "tor": {
     "enabled": true
   }
