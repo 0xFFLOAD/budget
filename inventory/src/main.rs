@@ -1,7 +1,8 @@
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, anyhow};
 use chrono::Utc;
 use log::{error, info};
 use reqwest::Client;
+use reqwest::blocking::Client as BlockingClient;
 use scraper::{Html, Selector};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
@@ -19,19 +20,6 @@ struct Product {
     last_updated: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-struct Category {
-    id: i64,
-    name: String,
-    parent_id: Option<i64>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct Store {
-    id: i64,
-    name: String,
-    url: String,
-}
 
 fn read_json<T: for<'de> Deserialize<'de>>(path: &str) -> Result<T> {
     let bytes = fs::read_to_string(path)?;
@@ -236,10 +224,10 @@ struct SeleniumDriver {
 }
 
 impl SeleniumDriver {
-    fn new(cfg: &SeleniumConfig) -> Result<Self> {
+    fn new(_cfg: &SeleniumConfig) -> Result<Self> {
         // simple connectivity check to local Selenium server
         let status_url = "http://localhost:4444/status";
-        let resp = Client::new().get(status_url).send()?;
+        let resp = BlockingClient::new().get(status_url).send()?;
         let json: serde_json::Value = resp.json()?;
         if !json["value"]["ready"].as_bool().unwrap_or(false) {
             return Err(anyhow!("selenium server not ready at {}", status_url));
@@ -276,7 +264,7 @@ impl SeleniumDriver {
             let mut price: Option<f64> = None;
             if let Some(pel) = element.select(&price_selector).next() {
                 let text = pel.text().collect::<Vec<_>>().join(" ");
-                if let Some(cap) = regex::Regex::new(r"(\d+[.,]?\d*)")
+                if let Some(cap) = Regex::new(r"(\d+[.,]?\d*)")
                     .unwrap()
                     .captures(&text)
                 {
@@ -287,7 +275,7 @@ impl SeleniumDriver {
             }
             // fallback: look in full card text
             if price.is_none() {
-                if let Some(cap) = regex::Regex::new(r"(\d+[.,]?\d*)")
+                if let Some(cap) = Regex::new(r"(\d+[.,]?\d*)")
                     .unwrap()
                     .captures(&name)
                 {
@@ -352,8 +340,6 @@ enum ScraperError {
     ConfigError(String),
     #[error("database error: {0}")]
     DatabaseError(#[from] rusqlite::Error),
-    #[error("selenium error: {0}")]
-    SeleniumError(String),
     #[error("network error: {0}")]
     NetworkError(#[from] reqwest::Error),
     #[error("io error: {0}")]

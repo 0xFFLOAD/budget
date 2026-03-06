@@ -20,7 +20,7 @@ This application leverages Rust's performance and safety guarantees combined wit
 
 The application consists of several core components:
 
-1. **Browser Automation:** selenium-rust handles interaction with the target website through a real browser instance
+1. **Browser Automation:** an external Selenium server handles interaction with the target website through a real browser instance
 2. **Data Storage:** rusqlite provides a safe interface to SQLite for persistent storage; all exported or intermediate data is structured as JSON (not TSV)
 3. **Data Handling:** serde-json enables JSON processing for configuration and data exchange
 4. **Networking:** reqwest powers HTTP requests for initial page loads and API interactions
@@ -39,7 +39,6 @@ reqwest = { version = "0.11", features = ["json"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 rusqlite = "0.20"
-selenium-rust = "0.20"
 scraper = "0.8"
 anyhow = "1.0"
 thiserror = "1.0"

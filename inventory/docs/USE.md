@@ -23,7 +23,10 @@ chmod +x ./scripts/requirements.sh
 
 # ensure Rust/Cargo is installed and available in PATH
 if ! command -v cargo >/dev/null 2>&1; then
-    echo "cargo not found: install Rust via rustup (https://rustup.rs) and restart your shell"
+    echo "cargo not found: installing Rust using rustup..."
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+    export PATH="$HOME/.cargo/bin:$PATH"
+    echo "restart your shell or run 'source $HOME/.cargo/env' to load cargo"
 fi
 
 # build the scraper

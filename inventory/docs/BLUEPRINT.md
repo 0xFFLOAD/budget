@@ -10,7 +10,7 @@ A Rust-based web scraper to extract product data from Shufersal websites, mappin
 - Reqwest (HTTP client)
 - Serde (JSON serialization/deserialization)
 - Rusqlite (SQLite database interface)
-- Selenium-rust (browser automation)
+- Selenium server (browser automation)
 - Scraper (HTML parsing)
 - anyhow (error handling)
 - thiserror (custom error types)
