@@ -173,7 +173,7 @@ Available environment variables:
 
 - `SHUFER_Scraper_URL`: Base URL for Shufersal (default: "https://www.shufersal.co.il")
 - `SHUFER_Scraper_MAX_CONCURRENT`: Maximum number of concurrent requests (default: 5)
-- `SHUFER_Scraper_TOR_ENABLED`: Enable Tor proxy (default: false)
+- `SHUFER_Scraper_TOR_ENABLED`: Enable Tor proxy (default: false)  # not required for wolt scraping
 - `SHUFER_Scraper_DATABASE_PATH`: SQLite database path (default: "shufersal_scraper.db")
 
 ## Usage Examples
@@ -236,7 +236,7 @@ fn load_config() -> Result<Config> {
 The application supports extensive configuration through environment variables and a JSON configuration file. Key settings include:
 
 - `MAX_CONCURRENT_REQUESTS`: Limits the number of parallel scraping operations
-- `TOR_ENABLED`: Enables Tor proxy routing (requires Tor installed)
+- `TOR_ENABLED`: Enables Tor proxy routing (requires Tor installed)  # mostly unused
 - `DATABASE_PATH`: Custom SQLite database location
 - `SCRAPE_INTERVAL`: Frequency of automatic scraping (in minutes)
 
@@ -258,7 +258,7 @@ cargo run -- --config config/production.json
 
 ```bash
 export SHUFER_Scraper_URL="https://www.shufersal.co.il"
-export SHUFER_Scraper_TOR_ENABLED=true
+# export SHUFER_Scraper_TOR_ENABLED=true  (not needed for default config)
 cargo run -- scrape
 ```
 

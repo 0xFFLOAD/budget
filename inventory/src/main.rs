@@ -232,7 +232,7 @@ struct SeleniumDriver {
 }
 
 impl SeleniumDriver {
-    fn new(cfg: &SeleniumConfig, tor_enabled: bool) -> Result<Self> {
+    fn new(cfg: &SeleniumConfig) -> Result<Self> {
         // check selenium server
         let base = "http://localhost:4444".to_string();
         let status_url = format!("{}/status", base);
@@ -259,7 +259,7 @@ impl SeleniumDriver {
             }
         }
 
-        let builder = Client::builder();
+        let builder = Client::builder(); // no proxy support required
         let client = builder.build()?;
 
         // create session with desired capabilities
@@ -395,7 +395,7 @@ struct Scraper {
 impl Scraper {
     fn new(cfg: Config) -> Result<Self> {
         let db = Database::init(&cfg.database.path)?;
-        let driver = SeleniumDriver::new(&cfg.selenium, cfg.tor.enabled)?;
+        let driver = SeleniumDriver::new(&cfg.selenium)?;
         Ok(Scraper { cfg, db, driver })
     }
 

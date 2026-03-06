@@ -4,9 +4,7 @@ Execute the following commands *from the `inventory` directory* (or prefix them 
 Before running them start the required services:
 
 ```bash
-# start Tor (optional, see note below)
-brew services start tor   # macos
-sudo systemctl start tor  # linux
+# (Tor is no longer used for the default wolt workflow)
 
 # launch Selenium server (Java + driver)
 # by default the scraper tells Selenium to use `safari` on macOS; other
@@ -56,14 +54,6 @@ java -jar selenium-server-standalone.jar standalone --port 4444 &
 # verify listening
 curl http://localhost:4444/status
 
-# see if the tor binary is running
-pgrep -lf tor
-
-# see if port 9050 is open locally
-lsof -i TCP:9050
-
-# ask the proxy itself for a version string
-curl --socks5-hostname 127.0.0.1:9050 http://check.torproject.org/ 2>/dev/null | head -n1
 
 # run a scraping pass (***start the Selenium server first!***)
 # you will see the error "selenium server not ready at http://localhost:4444/status"
@@ -88,8 +78,7 @@ cargo run -- load-json data/dump.json
 
 > **Note:** before running any command make sure:
 > * a Selenium server is reachable at http://localhost:4444
-> * if you wish to use Tor, a daemon is running and listening on 127.0.0.1:9050
->   (the scraper can operate without Tor but may expose your IP)
+> * Tor is no longer required for default scraping; any settings are ignored
 > * the `general.url` in your config either points to a single site or
 >   serves as a template.  when it contains `{lang}` the scraper will insert
 >   each string from `scraping.categories` in its place – the default value
