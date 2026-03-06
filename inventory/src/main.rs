@@ -377,8 +377,7 @@ impl CliArgs {
 }
 
 // ------------------ main ------------------
-#[tokio::main]
-async fn main() -> SResult<()> {
+fn main() -> SResult<()> {
     env_logger::init();
 
     let args = match CliArgs::parse() {
@@ -391,38 +390,47 @@ async fn main() -> SResult<()> {
     };
 
     let cfg = Config::load().map_err(|e| ScraperError::ConfigError(e.to_string()))?;
-    // TOR and Selenium are required by design
     if !cfg.tor.enabled {
         return Err(ScraperError::ConfigError("TOR proxy must be enabled".into()));
     }
-    let mut scraper = Scraper::new(cfg).await?;
 
-    match args.command.as_str() {
-        "init" => {
-            // simply ensure database exists and migrations applied
-            info!("initializing database at {}", scraper.cfg.database.path);
-            let _ = Database::init(&scraper.cfg.database.path)?;
-        }
-        "scrape" => {
-            info!("starting scrape loop");
-            scraper.run().await?;
-        }
-        "dump-json" => {
-            let path = args.arg.as_deref().unwrap_or("data/dump.json");
-            let _ = fs::create_dir_all("data");
-            scraper.db.export_json(path)?;
-            info!("exported products to {}", path);
-        }
-        "load-json" => {
-            let path = args.arg.as_deref().unwrap_or("data/dump.json");
-            scraper.db.import_json(path)?;
-            info!("imported products from {}", path);
-        }
-        other => {
-            error!("unknown command: {}", other);
-            eprintln!("usage: <init|scrape|dump-json|load-json> [path]");
-        }
+    // handle _init_ without spinning an async runtime
+    if args.command.as_str() == "init" {
+        info!("initializing database at {}", cfg.database.path);
+        let _ = Database::init(&cfg.database.path)?;
+        return Ok(());
     }
 
-    Ok(())
+    // create a Tokio runtime for the remaining async commands
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .map_err(|e| ScraperError::Other(e.to_string()))?;
+
+    rt.block_on(async move {
+        let mut scraper = Scraper::new(cfg).await?;
+
+        match args.command.as_str() {
+            "scrape" => {
+                info!("starting scrape loop");
+                scraper.run().await?;
+            }
+            "dump-json" => {
+                let path = args.arg.as_deref().unwrap_or("data/dump.json");
+                let _ = fs::create_dir_all("data");
+                scraper.db.export_json(path)?;
+                info!("exported products to {}", path);
+            }
+            "load-json" => {
+                let path = args.arg.as_deref().unwrap_or("data/dump.json");
+                scraper.db.import_json(path)?;
+                info!("imported products from {}", path);
+            }
+            other => {
+                error!("unknown command: {}", other);
+                eprintln!("usage: <init|scrape|dump-json|load-json> [path]");
+            }
+        }
+        Ok(())
+    })
 }

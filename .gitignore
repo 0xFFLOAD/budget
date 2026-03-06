@@ -1,3 +1,4 @@
 inventory/Cargo.lock
 inventory/target
 inventory/selenium-server-standalone.jar
+inventory/data/shufersal_scraper.db
