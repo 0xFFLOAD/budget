@@ -226,7 +226,7 @@ impl SeleniumDriver {
     fn new(_cfg: &SeleniumConfig) -> Result<Self> {
         // simple connectivity check to local Selenium server
         let status_url = "http://localhost:4444/status";
-        let resp = BlockingClient::new().get(status_url).send()?;
+        let resp = Client::new().get(status_url).send()?;
         let json: serde_json::Value = resp.json()?;
         if !json["value"]["ready"].as_bool().unwrap_or(false) {
             return Err(anyhow!("selenium server not ready at {}", status_url));
