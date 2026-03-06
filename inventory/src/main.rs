@@ -1,6 +1,6 @@
 use anyhow::{Context, Result, anyhow};
 use chrono::Utc;
-use log::{error, info, debug};
+use log::{error, info, debug, warn};
 use reqwest::blocking::Client;
 use scraper::{Html, Selector};
 use regex::Regex;
@@ -43,6 +43,7 @@ struct GeneralConfig {
 #[derive(Debug, Serialize, Deserialize)]
 struct SeleniumConfig {
     headless: bool,
+    browser: String,
     proxy: ProxyConfig,
 }
 
@@ -93,6 +94,7 @@ impl Default for Config {
             },
             selenium: SeleniumConfig {
                 headless: true,
+                browser: "safari".to_string(),
                 proxy: ProxyConfig {
                     enabled: true,
                     host: "127.0.0.1".to_string(),
@@ -126,6 +128,9 @@ impl Config {
         if let Ok(url) = env::var("SHUFER_Scraper_URL") {
             cfg.general.url = url;
         }
+        if let Ok(br) = env::var("SHUFER_Scraper_BROWSER") {
+            cfg.selenium.browser = br;
+        }
         // user agent ignored when using Tor
         if let Ok(val) = env::var("SHUFER_Scraper_MAX_CONCURRENT") {
             if let Ok(n) = val.parse() {
@@ -144,9 +149,10 @@ impl Config {
         if let Some(parent) = std::path::Path::new(&cfg.database.path).parent() {
             let _ = std::fs::create_dir_all(parent);
         }
-        // must have tor enabled
+        // tor may be disabled if the target site blocks access over it;
+        // we only emit a warning here, the caller will decide whether to proceed.
         if !cfg.tor.enabled {
-            return Err(anyhow!("configuration requires TOR to be enabled"));
+            log::warn!("TOR proxy disabled – HTTP requests will go direct");
         }
         Ok(cfg)
     }
@@ -216,45 +222,82 @@ impl Database {
     }
 }
 
-// ------------------ selenium automation (simplified) ------------------
+// ------------------ selenium automation (webdriver) ------------------
 struct SeleniumDriver {
     client: Client,
-    last_url: Option<String>,
+    base: String,
+    session_id: String,
 }
 
 impl SeleniumDriver {
-    fn new(cfg: &SeleniumConfig) -> Result<Self> {
-        // simple connectivity check to local Selenium server
-        let status_url = "http://localhost:4444/status";
-        let resp = Client::new().get(status_url).send()?;
+    fn new(cfg: &SeleniumConfig, tor_enabled: bool) -> Result<Self> {
+        // check selenium server
+        let base = "http://localhost:4444".to_string();
+        let status_url = format!("{}/status", base);
+        let resp = Client::new().get(&status_url).send()?;
         let json: serde_json::Value = resp.json()?;
         if !json["value"]["ready"].as_bool().unwrap_or(false) {
             return Err(anyhow!("selenium server not ready at {}", status_url));
         }
-        // browser field not used; assume tor tunnel will handle requests
-        // set up HTTP client to go through the Tor proxy if enabled
+
         let mut builder = Client::builder();
-        if cfg.proxy.enabled {
+        if tor_enabled && cfg.proxy.enabled {
             let proxy_url = format!("socks5://{}:{}", cfg.proxy.host, cfg.proxy.port);
             debug!("using tor proxy at {}", proxy_url);
             builder = builder.proxy(reqwest::Proxy::all(&proxy_url)?);
         }
         let client = builder.build()?;
-        Ok(SeleniumDriver { client, last_url: None })
+
+        // create session with desired capabilities
+        let mut caps = serde_json::json!({
+            "capabilities": {"alwaysMatch": {"browserName": cfg.browser.clone()} }
+        });
+        if tor_enabled && cfg.proxy.enabled {
+            caps["capabilities"]["alwaysMatch"]["proxy"] = serde_json::json!({
+                "proxyType": "manual",
+                "socksProxy": format!("{}:{}", cfg.proxy.host, cfg.proxy.port),
+                "socksVersion": 5
+            });
+        }
+        let sess_resp = client
+            .post(&format!("{}/session", base))
+            .header("Content-Type", "application/json; charset=utf-8")
+            .json(&caps)
+            .send()?;
+        let sess_json: serde_json::Value = sess_resp.json()?;
+        debug!("webdriver new session response: {}", sess_json);
+        let session_id = sess_json["value"]["sessionId"]
+            .as_str()
+            .or_else(|| sess_json["sessionId"].as_str())
+            .context("no session id returned by webdriver")?
+            .to_string();
+
+        Ok(SeleniumDriver { client, base, session_id })
     }
 
     fn navigate(&mut self, url: &str) -> Result<()> {
-        self.last_url = Some(url.to_string());
+        let nav_url = format!("{}/session/{}/url", self.base, self.session_id);
+        let _ = self
+            .client
+            .post(&nav_url)
+            .json(&serde_json::json!({"url": url}))
+            .send()?;
         Ok(())
     }
 
+    fn page_source(&self) -> Result<String> {
+        let src_url = format!("{}/session/{}/source", self.base, self.session_id);
+        let resp = self.client.get(&src_url).send()?;
+        let json: serde_json::Value = resp.json()?;
+        let src = json["value"]
+            .as_str()
+            .context("no page source returned")?
+            .to_string();
+        Ok(src)
+    }
+
     fn extract_products(&self) -> Result<Vec<Product>> {
-        let url = self
-            .last_url
-            .as_ref()
-            .context("no URL has been navigated to")?;
-        let resp = self.client.get(url).send()?;
-        let html = resp.text()?;
+        let html = self.page_source()?;
         let fragment = Html::parse_document(&html);
         let selector = Selector::parse(".product-card").unwrap_or_else(|_| Selector::parse("*").unwrap());
         let price_selector = Selector::parse(".price").unwrap_or_else(|_| Selector::parse("*").unwrap());
@@ -339,7 +382,7 @@ struct Scraper {
 impl Scraper {
     fn new(cfg: Config) -> Result<Self> {
         let db = Database::init(&cfg.database.path)?;
-        let driver = SeleniumDriver::new(&cfg.selenium)?;
+        let driver = SeleniumDriver::new(&cfg.selenium, cfg.tor.enabled)?;
         Ok(Scraper { cfg, db, driver })
     }
 
@@ -418,7 +461,8 @@ fn main() -> SResult<()> {
 
     let cfg = Config::load().map_err(|e| ScraperError::ConfigError(e.to_string()))?;
     if !cfg.tor.enabled {
-        return Err(ScraperError::ConfigError("TOR proxy must be enabled".into()));
+        // not fatal; site may not work over Tor, warn the user
+        warn!("starting with tor disabled (set SHUFER_Scraper_TOR_ENABLED=true to re-enable)");
     }
 
     // handle _init_ without spinning an async runtime

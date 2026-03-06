@@ -3,17 +3,23 @@
 Execute the following commands from the `inventory` directory.  Before running them start the required services:
 
 ```bash
-# start Tor
+# start Tor (optional, see note below)
 brew services start tor   # macos
 sudo systemctl start tor  # linux
 
-# launch Selenium (requires Java + driver)
- # ensure you have a valid selenium-server-standalone.jar in this directory;
- # the requirements script attempts to fetch one, but you can also
- # download it manually from https://github.com/SeleniumHQ/selenium/releases
- curl -L -o selenium-server-standalone.jar \
+# launch Selenium server (Java + driver)
+# by default the scraper tells Selenium to use `safari` on macOS; other
+# browsers (chrome, firefox) may require their respective webdriver
+# binaries on the PATH.
+# *safari users:* open Safari → Preferences → Advanced and enable
+# "Show Develop menu in menu bar", then in Develop menu choose
+# "Allow Remote Automation" before starting the server.
+# ensure you have a valid selenium-server-standalone.jar in this directory;
+# the requirements script attempts to fetch one, but you can also
+# download it manually from https://github.com/SeleniumHQ/selenium/releases
+curl -L -o selenium-server-standalone.jar \
   https://github.com/SeleniumHQ/selenium/releases/download/selenium-4.10.0/selenium-server-4.10.0.jar
- java -jar selenium-server-standalone.jar -port 4444 &
+java -jar selenium-server-standalone.jar -port 4444 &
 ```
 
 ```bash
@@ -58,7 +64,14 @@ lsof -i TCP:9050
 # ask the proxy itself for a version string
 curl --socks5-hostname 127.0.0.1:9050 http://check.torproject.org/ 2>/dev/null | head -n1
 
-# run a scraping pass (Tor + Selenium must be running)
+# run a scraping pass (Selenium must be running; Tor is optional)
+# the browser used by Selenium is configurable – the default is `safari` on
+# macOS.  Chrome/Firefox are also supported if the appropriate WebDriver is
+# available and `SHUFER_Scraper_BROWSER` is set accordingly.
+# to override or disable Tor you can set environment variables or edit
+# `config.json`:
+#   export SHUFER_Scraper_BROWSER=chrome
+#   export SHUFER_Scraper_TOR_ENABLED=false
 cargo run -- scrape
 
 # export stored products to JSON (default path: data/dump.json)
@@ -70,4 +83,9 @@ cargo run -- load-json data/dump.json
 
 > **Note:** before running any command make sure:
 > * a Selenium server is reachable at http://localhost:4444
-> * a Tor daemon is running and listening on 127.0.0.1:9050
+> * if you wish to use Tor, a daemon is running and listening on 127.0.0.1:9050
+>   (the scraper can operate without Tor but may expose your IP)
+> * the `general.url` in your config points to the correct locale, e.g.
+>   "https://www.shufersal.co.il/online/he" for Hebrew pages
+> * optionally, set `selenium.browser` in your JSON or
+>   `SHUFER_Scraper_BROWSER` env var (defaults to "safari").
