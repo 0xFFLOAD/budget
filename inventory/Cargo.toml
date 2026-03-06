@@ -1,0 +1,21 @@
+[package]
+name = "shufersal_scraper"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.11", features = ["json", "blocking"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+rusqlite = { version = "0.29", features = ["bundled"] }
+scraper = "0.13"
+selenium-rust = "0.20"
+regex = "1"
+anyhow = "1.0"
+thiserror = "1.0"
+log = "0.4"
+env_logger = "0.9"
+config = "0.13"
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1", features = ["v4"] }

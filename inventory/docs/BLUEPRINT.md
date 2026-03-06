@@ -2,6 +2,8 @@
 
 ## Overview
 A Rust-based web scraper to extract product data from Shufersal websites, mapping item names to their prices for a personal budgeting application. All scraped or exported data is represented as JSON objects (TSV format is intentionally avoided).
+
+> **Prerequisite:** this project requires a live Selenium server (e.g. on localhost:4444) and a running Tor proxy. Startup routines validate connectivity and will error out if either is missing.
 ## Dependencies
 - Rust + Cargo
 - Tokio (async runtime)
@@ -16,7 +18,7 @@ A Rust-based web scraper to extract product data from Shufersal websites, mappin
 - config (configuration management)
 - chrono (date/time handling)
 - uuid (unique identifiers)
-- Tor (optional, for anonymity)
+- Tor (required proxy for scraping)
 
 
 ## JSON Handling & Utilities
@@ -24,6 +26,8 @@ Before any TSV-like format is considered, the project treats all structured data
 
 - **`types.rs`** – definitions of serializable structs (`Product`, `Category`, `Store`, etc.) with `serde::Serialize` / `Deserialize` derived.
 - **`json_utils.rs`** – helper functions for reading/writing JSON files, pretty-printing, and merging with config values.
+
+- **Selenium/Tor validation** – initialization code contacts `http://localhost:4444/status` and insists `tor.enabled` is true; configuration without these components is rejected.
 - **Export/Import CLI commands** – `dump-json` and `load-json` commands that produce/consume JSON files, used for debugging and data interchange.
 - **Database bridges** – converters between `rusqlite::Row` and the JSON-compatible struct types, ensuring data can flow in/out of the DB without ever touching TSV.
 - **Early validation** – when scraping, the first step after extraction is to serialize to JSON and validate schema, allowing easier unit testing.
@@ -41,8 +45,10 @@ These utilities are referenced in the pseudocode below where applicable.
 │   ├── selenium.rs (Selenium automation)
 │   ├── errors.rs (error handling)
 │   └── cli.rs (command-line interface)
-└── data/
-    └── shufersal_scraper.db (SQLite database)
+└── data/                            # directory created at runtime
+    ├── shufersal_scraper.db         # SQLite database (default)
+    ├── latest.json                  # most recent scrape output
+    └── dump.json                    # example export file
 ```
 
 ## Pseudocode
@@ -103,7 +109,9 @@ impl SeleniumDriver {
     }
 
     fn extract_products(&self) -> Result<Vec<Product>, anyhow::Error> {
-        // Extract product data from page
+        // Extract product data from page, then filter out any items that
+        // don't look like food or lack a numeric price; only valid
+        // food/price pairs are returned.
     }
 }
 ```
@@ -193,9 +201,9 @@ async fn main() -> Result<(), anyhow::Error> {
 ## Features
 - Configuration management (environment variables, JSON config file)
 - SQLite database integration with migration support
-- Selenium-based browser automation for JavaScript rendering
+- Selenium-based browser automation for JavaScript rendering (only food items with a price are kept)
 - JSON serialization/deserialization using Serde
 - Comprehensive error handling with custom error types
 - Logging functionality for debugging and monitoring
 - Command-line interface for user interaction
-- Optional Tor integration for enhanced privacy
+- Tor integration for enhanced privacy (required for scraping)

@@ -4,7 +4,7 @@ A Rust-based web scraper designed to extract product data from Shufersal (and si
 
 ## Overview
 
-This application leverages Rust's performance and safety guarantees combined with browser automation (Selenium) to scrape dynamic, JavaScript-heavy websites. The scraped data is stored in an SQLite database for efficient querying and retrieval.
+This application leverages Rust's performance and safety guarantees combined with browser automation (Selenium) to scrape dynamic, JavaScript-heavy websites. **A running Selenium server and Tor proxy are required for the tool to function; it performs a startup check and will abort otherwise.** The scraper will filter the page content and keep only food-related products that have a valid numeric price; all other text or elements are considered garbage and ignored. The scraped data is stored in an SQLite database for efficient querying and retrieval.
 
 ## Key Features
 
@@ -52,7 +52,7 @@ uuid = "0.8"
 
 ## Prerequisites
 
-Before building and running the application, ensure you have the following installed:
+Before building and running the application, ensure you have the following installed and running:
 
 1. **Java JDK (version 8 or 11):**
    - Selenium requires Java to be installed on your system
@@ -71,17 +71,13 @@ Before building and running the application, ensure you have the following insta
 2. **Rust and Cargo:**
    - Install from [rustup.rs](https://rustup.rs/)
 
-3. **Browser Installation:**
-   - Chrome (recommended for best compatibility)
-     ```bash
-     brew cask install google-chrome
-     ```
-   - Firefox:
-     ```bash
-     brew cask install firefox
-     ```
+3. **Browser & WebDriver:**
+   - Chrome (recommended) or Firefox, plus the corresponding
+     `chromedriver`/`geckodriver` binary.
+   - Run a Selenium standalone server (typically listening on http://localhost:4444).
+     The scraper will check this endpoint at startup and fail if unreachable.
 
-4. **Tor (Optional but Recommended):**
+4. **Tor:**
    - Install Tor:
      - For Ubuntu/Debian:
        ```bash
@@ -91,10 +87,7 @@ Before building and running the application, ensure you have the following insta
        ```bash
        brew install tor
        ```
-   - Ensure Tor is running:
-     ```bash
-     tor &  # Start Tor in the background
-     ```
+   - **Tor must be running** before scraping, e.g. `tor &`.
 
 ## Database Initialization
 
@@ -124,6 +117,8 @@ The database schema includes the following tables:
    - unit (TEXT)
    - category_id (INTEGER)
    - last_updated (DATETIME)
+
+> The SQLite file and JSON exports live under a `data/` directory by default.
 
 2. **Categories:**
    - id (INTEGER PRIMARY KEY)
