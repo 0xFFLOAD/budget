@@ -142,7 +142,7 @@ Create a `config.json` file with the following structure:
 ```json
 {
   "general": {
-    "url": "https://www.shufersal.co.il",
+    "url": "https://wolt.com/{lang}/isr/tel-aviv/venue/wolt-market-herzliya",
     "max_retries": 3,
     "timeout": 30
   },
@@ -171,7 +171,7 @@ Create a `config.json` file with the following structure:
 
 Available environment variables:
 
-- `SHUFER_Scraper_URL`: Base URL for Shufersal (default: "https://www.shufersal.co.il")
+- `SHUFER_Scraper_URL`: Base URL for target site (default: "https://wolt.com/{lang}/isr/tel-aviv/venue/wolt-market-herzliya")
 - `SHUFER_Scraper_MAX_CONCURRENT`: Maximum number of concurrent requests (default: 5)
 - `SHUFER_Scraper_TOR_ENABLED`: Enable Tor proxy (default: false)  # not required for wolt scraping
 - `SHUFER_Scraper_DATABASE_PATH`: SQLite database path (default: "shufersal_scraper.db")
