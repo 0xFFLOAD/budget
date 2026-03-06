@@ -72,9 +72,11 @@ Before building and running the application, ensure you have the following insta
    - Install from [rustup.rs](https://rustup.rs/)
 
 3. **Browser & WebDriver:**
-   - Chrome (recommended) or Firefox, plus the corresponding
-     `chromedriver`/`geckodriver` binary.
-   - Run a Selenium standalone server (typically listening on http://localhost:4444).
+   - A Selenium server must be running (e.g. using Chrome, Firefox, or any
+     other browser), but the configuration no longer requires specifying a
+     browser name. All traffic is routed through Tor so the browser value is
+     ignored.
+   - Run the Selenium standalone server (typically listening on http://localhost:4444).
      The scraper will check this endpoint at startup and fail if unreachable.
 
 4. **Tor:**
@@ -142,7 +144,6 @@ Create a `config.json` file with the following structure:
 {
   "general": {
     "url": "https://www.shufersal.co.il",
-    "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
     "max_retries": 3,
     "timeout": 30
   },
@@ -172,7 +173,6 @@ Create a `config.json` file with the following structure:
 Available environment variables:
 
 - `SHUFER_Scraper_URL`: Base URL for Shufersal (default: "https://www.shufersal.co.il")
-- `SHUFER_Scraper_USER_AGENT`: Custom user agent string (default: Chrome user agent)
 - `SHUFER_Scraper_MAX_CONCURRENT`: Maximum number of concurrent requests (default: 5)
 - `SHUFER_Scraper_TOR_ENABLED`: Enable Tor proxy (default: false)
 - `SHUFER_Scraper_DATABASE_PATH`: SQLite database path (default: "shufersal_scraper.db")
@@ -237,7 +237,6 @@ fn load_config() -> Result<Config> {
 The application supports extensive configuration through environment variables and a JSON configuration file. Key settings include:
 
 - `MAX_CONCURRENT_REQUESTS`: Limits the number of parallel scraping operations
-- `USER_AGENT`: Custom user agent string for HTTP requests
 - `TOR_ENABLED`: Enables Tor proxy routing (requires Tor installed)
 - `DATABASE_PATH`: Custom SQLite database location
 - `SCRAPE_INTERVAL`: Frequency of automatic scraping (in minutes)

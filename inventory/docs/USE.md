@@ -22,10 +22,10 @@ cd /Users/sam/budget/inventory
      Selenium server, so Java must be installed and the driver started.
 
 3. **Browser & WebDriver**
-   - Because all scraping must be routed through Tor, the browser field is
-     a nominal value (default `tor`). You still need a Selenium server
-     running (using any browser binary), but traffic will pass through the
-     Tor proxy defined in the config.
+   - Because all scraping must be routed through Tor, there is no
+     browser field; only the proxy settings matter. You still need a
+     Selenium server running (any browser is fine), but traffic will pass
+     through the Tor proxy defined in the config.
    - Start a Selenium standalone server (e.g. `selenium-server -port 4444`).
    - The code will check `http://localhost:4444/status` on startup and
      fail if the service is not reachable.
@@ -70,7 +70,6 @@ Default values are defined in the source (see `Config::default()`).
 {
   "general": {
     "url": "https://www.shufersal.co.il",
-    "user_agent": "...",
     "max_retries": 3,
     "timeout": 30
   },
@@ -92,7 +91,6 @@ Default values are defined in the source (see `Config::default()`).
 ### Environment variables
 
 - `SHUFER_Scraper_URL` – base URL (default `https://www.shufersal.co.il`)
-- `SHUFER_Scraper_USER_AGENT` – custom UA
 - `SHUFER_Scraper_MAX_CONCURRENT` – parallel request count
 - `SHUFER_Scraper_TOR_ENABLED` – `true` or `false`
 - `SHUFER_Scraper_DATABASE_PATH` – SQLite file path

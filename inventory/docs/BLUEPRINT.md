@@ -58,7 +58,6 @@ These utilities are referenced in the pseudocode below where applicable.
 // src/config.rs
 struct Config {
     url: String,
-    user_agent: String,
     max_retries: u32,
     timeout: u64,
     selenium: SeleniumConfig,
@@ -69,7 +68,7 @@ struct Config {
 
 impl Config {
     fn load_from_env() -> Result<Self, anyhow::Error> {
-        // Load configuration from environment variables
+        // Load configuration from environment variables (browser ignored)
     }
 }
 ```

@@ -49,14 +49,12 @@ fn write_json<T: Serialize>(path: &str, value: &T) -> Result<()> {
 #[derive(Debug, Serialize, Deserialize)]
 struct GeneralConfig {
     url: String,
-    user_agent: String,
     max_retries: u32,
     timeout: u64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 struct SeleniumConfig {
-    browser: String,
     headless: bool,
     proxy: ProxyConfig,
 }
@@ -103,13 +101,10 @@ impl Default for Config {
         Config {
             general: GeneralConfig {
                 url: "https://www.shufersal.co.il".to_string(),
-                user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36".to_string(),
                 max_retries: 3,
                 timeout: 30,
             },
             selenium: SeleniumConfig {
-                // browser field is nominal; operations are routed via Tor
-                browser: "tor".to_string(),
                 headless: true,
                 proxy: ProxyConfig {
                     enabled: true,
@@ -144,9 +139,7 @@ impl Config {
         if let Ok(url) = env::var("SHUFER_Scraper_URL") {
             cfg.general.url = url;
         }
-        if let Ok(ua) = env::var("SHUFER_Scraper_USER_AGENT") {
-            cfg.general.user_agent = ua;
-        }
+        // user agent ignored when using Tor
         if let Ok(val) = env::var("SHUFER_Scraper_MAX_CONCURRENT") {
             if let Ok(n) = val.parse() {
                 cfg.scraping.concurrent_requests = n;
@@ -164,12 +157,9 @@ impl Config {
         if let Some(parent) = std::path::Path::new(&cfg.database.path).parent() {
             let _ = std::fs::create_dir_all(parent);
         }
-        // must have tor enabled and a browser specified
+        // must have tor enabled
         if !cfg.tor.enabled {
             return Err(anyhow!("configuration requires TOR to be enabled"));
-        }
-        if cfg.selenium.browser.is_empty() {
-            return Err(anyhow!("configuration requires a selenium browser name"));
         }
         Ok(cfg)
     }

@@ -22,7 +22,6 @@ fn write_json<T: Serialize>(path: &str, value: &T) -> Result<()> { /* serde_json
 #[derive(Serialize, Deserialize, Debug)]
 struct Config {
     url: String,
-    user_agent: String,
     max_retries: u32,
     timeout: u64,
     selenium: SeleniumConfig,
@@ -30,7 +29,7 @@ struct Config {
     scraping: ScrapingConfig,
     tor: TorConfig,
 }
-#[derive(Serialize, Deserialize, Debug)] struct SeleniumConfig { browser: String, headless: bool, proxy: ProxyConfig }
+#[derive(Serialize, Deserialize, Debug)] struct SeleniumConfig { headless: bool, proxy: ProxyConfig }
 #[derive(Serialize, Deserialize, Debug)] struct ProxyConfig { enabled: bool, host: String, port: u16 }
 #[derive(Serialize, Deserialize, Debug)] struct DatabaseConfig { path: String, cache_size: i64 }
 #[derive(Serialize, Deserialize, Debug)] struct ScrapingConfig { categories: Vec<String>, scrape_interval: u64, concurrent_requests: usize }
