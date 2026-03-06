@@ -1,6 +1,6 @@
 use anyhow::{Context, Result, anyhow};
 use chrono::Utc;
-use log::{error, info};
+use log::{error, info, debug};
 use reqwest::blocking::Client;
 use scraper::{Html, Selector};
 use regex::Regex;
