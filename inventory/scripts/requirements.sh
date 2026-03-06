@@ -30,12 +30,33 @@ else
 fi
 
 # Java JDK 11
+# Homebrew package might install under /opt/homebrew/opt/openjdk@11
 ensure_command java openjdk@11
+cat <<'NOTE'
+After installing Java you may need to add it to your PATH manually:
+
+  export PATH="/opt/homebrew/opt/openjdk@11/bin:$PATH"
+
+Add that line to ~/.zshrc or ~/.bash_profile if the `java` command
+is still not found.
+
+You can verify installation with:
+  java --version
+
+NOTE
 
 # Selenium standalone server (Java jar)
+# Download latest stable 4.x release; change URL if it moves.
 if [ ! -f "selenium-server-standalone.jar" ]; then
     echo "Downloading Selenium standalone server..."
-    curl -L -o selenium-server-standalone.jar https://repo1.maven.org/maven2/org/seleniumhq/selenium/selenium-server/4.0.0/selenium-server-4.0.0.jar
+    curl -L -o selenium-server-standalone.jar \
+      https://github.com/SeleniumHQ/selenium/releases/download/selenium-4.10.0/selenium-server-4.10.0.jar
+    # verify it is a jar
+    if ! file selenium-server-standalone.jar | grep -q "Java archive"; then
+        echo "download failed or produced invalid jar; please check URL or download manually"
+        rm -f selenium-server-standalone.jar
+        exit 1
+    fi
 fi
 
 # Chrome (and chromedriver)

@@ -1,166 +1,47 @@
-# Usage Guide for Shufersal Scraper
+# Quick Start
 
-This document explains how to build, configure, and run the scraper application described in this repository.
-
-## Prerequisites
-
-Before anything else you can run the bundled helper script (now
-located in `scripts/`) which attempts to install all required system
-packages on macOS:
+Execute the following commands from the `inventory` directory.  Before running them start the required services:
 
 ```bash
-cd /Users/sam/budget/inventory
+# start Tor
+brew services start tor   # macos
+sudo systemctl start tor  # linux
+
+# launch Selenium (requires Java + driver)
+ # ensure you have a valid selenium-server-standalone.jar in this directory;
+ # the requirements script attempts to fetch one, but you can also
+ # download it manually from https://github.com/SeleniumHQ/selenium/releases
+ curl -L -o selenium-server-standalone.jar \
+  https://github.com/SeleniumHQ/selenium/releases/download/selenium-4.10.0/selenium-server-4.10.0.jar
+ java -jar selenium-server-standalone.jar -port 4444 &
+```
+
+```bash
+# install prerequisites on macOS
+chmod +x ./scripts/requirements.sh
 ./scripts/requirements.sh
-```
 
-1. **Rust & Cargo**
-   - Installed by the script; otherwise install via https://rustup.rs
-   - Ensure `cargo` is available in your `PATH`.
+# ensure Rust/Cargo is installed and available in PATH
+if ! command -v cargo >/dev/null 2>&1; then
+    echo "cargo not found: install Rust via rustup (https://rustup.rs) and restart your shell"
+fi
 
-2. **Java JDK (8 or 11)**
-   - Needed by Selenium WebDriver. The scraper will connect to a local
-     Selenium server, so Java must be installed and the driver started.
-
-3. **Browser & WebDriver**
-   - Because all scraping must be routed through Tor, there is no
-     browser field; only the proxy settings matter. You still need a
-     Selenium server running (any browser is fine), but traffic will pass
-     through the Tor proxy defined in the config.
-   - Start a Selenium standalone server (e.g. `selenium-server -port 4444`).
-   - The code will check `http://localhost:4444/status` on startup and
-     fail if the service is not reachable.
-
-4. **Tor**
-   - Tor proxy **must be running** on `127.0.0.1:9050`; the scraper
-     rejects configuration where Tor is disabled. Install via brew
-     or your package manager and run `tor` before scraping.
-
-
-## Building the Project
-
-... (rest unchanged) ...
-
-
-## Building the Project
-
-From the `inventory` directory:
-
-```bash
-cd /Users/sam/budget/inventory
+# build the scraper
 cargo build --release
-```
 
-This will compile `src/main.rs` and its dependencies, producing a binary in `target/release/shufersal_scraper`.
-
-
-## Configuration
-
-Configuration values are loaded in the following order (later entries override earlier ones):
-
-1. **`config.json` file** (a template is provided at the repository root `config.json`).  The file
-   must include valid `selenium` and `tor` sections; disabling Tor is not
-   permitted and the scraper will refuse to run.
-2. **Environment variables**
-
-Default values are defined in the source (see `Config::default()`).
-
-### config.json structure
-
-```json
-{
-  "general": {
-    "url": "https://www.shufersal.co.il",
-    "max_retries": 3,
-    "timeout": 30
-  },
-  "selenium": {
-    "browser": "tor",             # placeholder; all traffic goes through Tor
-    "headless": true,
-    "proxy": { "enabled": true, "host": "127.0.0.1", "port": 9050 }
-  },
-  "database": { "path": "data/shufersal_scraper.db", "cache_size": 100 },
-  "scraping": {
-    "categories": ["dairy","produce","bakery"],
-    "scrape_interval": 60,
-    "concurrent_requests": 5
-  },
-  "tor": { "enabled": false }
-}
-```
-
-### Environment variables
-
-- `SHUFER_Scraper_URL` – base URL (default `https://www.shufersal.co.il`)
-- `SHUFER_Scraper_MAX_CONCURRENT` – parallel request count
-- `SHUFER_Scraper_TOR_ENABLED` – `true` or `false`
-- `SHUFER_Scraper_DATABASE_PATH` – SQLite file path
-
-
-## Commands
-
-> **Note:** prior to running any command ensure the Selenium server is
-> listening at localhost:4444 and the Tor daemon is running.
-
-Usage syntax:
-
-```sh
-cargo run -- <command> [path]
-# or after building: ./target/release/shufersal_scraper <command> [path]
-```
-
-### init
-
-Initializes the SQLite database (creates tables). Run once before scraping.
-
-```bash
+# initialize the database once
 cargo run -- init
-```
 
-### scrape
-
-Performs a scraping pass over the configured categories, filters out
-any non-food or price-less entries (all garbage dropped), stores valid
-items in the database, and writes a `data/latest.json` file containing
-only those food/price pairs (creates `data/` if missing).
-
-```bash
+# run a scraping pass (Tor + Selenium must be running)
 cargo run -- scrape
+
+# export stored products to JSON (default path: data/dump.json)
+cargo run -- dump-json data/dump.json
+
+# import products from JSON
+cargo run -- load-json data/dump.json
 ```
 
-### dump-json [file]
-
-Exports all products currently in the database to the specified JSON file
-(`data/dump.json` by default).
-
-```bash
-cargo run -- dump-json products.json
-```
-
-### load-json [file]
-
-Reads products from a JSON file (defaults to `data/dump.json`) and imports them into the database.
-
-```bash
-cargo run -- load-json products.json
-```
-
-
-## Troubleshooting
-
-- **`cargo` not found:** ensure Rust is installed and `~/.cargo/bin` is in `PATH`.
-- **Database errors:** check file permissions and disk space.
-- **Element parsing failures:** website structure might have changed;
-  update selector logic in `extract_products`.
-
-
-## Extending or Modifying
-
-- To replace the dummy HTTP scraping with real Selenium automation,
-  modify `SeleniumDriver` in `src/main.rs` or split it into
-  `selenium.rs`.
-- Add new CLI commands by editing the `match` block in `main`.
-
-
----
-
-Keep this guide up to date when the CLI or configuration changes.
+> **Note:** before running any command make sure:
+> * a Selenium server is reachable at http://localhost:4444
+> * a Tor daemon is running and listening on 127.0.0.1:9050
