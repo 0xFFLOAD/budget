@@ -22,7 +22,10 @@ cd /Users/sam/budget/inventory
      Selenium server, so Java must be installed and the driver started.
 
 3. **Browser & WebDriver**
-   - Chrome (or Firefox) + corresponding `chromedriver`/`geckodriver`.
+   - Because all scraping must be routed through Tor, the browser field is
+     a nominal value (default `tor`). You still need a Selenium server
+     running (using any browser binary), but traffic will pass through the
+     Tor proxy defined in the config.
    - Start a Selenium standalone server (e.g. `selenium-server -port 4444`).
    - The code will check `http://localhost:4444/status` on startup and
      fail if the service is not reachable.
@@ -54,7 +57,7 @@ This will compile `src/main.rs` and its dependencies, producing a binary in `tar
 
 Configuration values are loaded in the following order (later entries override earlier ones):
 
-1. **`config.json` file** (if present in the working directory).  The file
+1. **`config.json` file** (a template is provided at the repository root `config.json`).  The file
    must include valid `selenium` and `tor` sections; disabling Tor is not
    permitted and the scraper will refuse to run.
 2. **Environment variables**
@@ -72,9 +75,9 @@ Default values are defined in the source (see `Config::default()`).
     "timeout": 30
   },
   "selenium": {
-    "browser": "chrome",
+    "browser": "tor",             # placeholder; all traffic goes through Tor
     "headless": true,
-    "proxy": { "enabled": false, "host": "127.0.0.1", "port": 9050 }
+    "proxy": { "enabled": true, "host": "127.0.0.1", "port": 9050 }
   },
   "database": { "path": "data/shufersal_scraper.db", "cache_size": 100 },
   "scraping": {

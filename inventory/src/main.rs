@@ -108,10 +108,11 @@ impl Default for Config {
                 timeout: 30,
             },
             selenium: SeleniumConfig {
-                browser: "chrome".to_string(),
+                // browser field is nominal; operations are routed via Tor
+                browser: "tor".to_string(),
                 headless: true,
                 proxy: ProxyConfig {
-                    enabled: false,
+                    enabled: true,
                     host: "127.0.0.1".to_string(),
                     port: 9050,
                 },
@@ -253,9 +254,7 @@ impl SeleniumDriver {
         if !json["value"]["ready"].as_bool().unwrap_or(false) {
             return Err(anyhow!("selenium server not ready at {}", status_url));
         }
-        if cfg.browser.is_empty() {
-            return Err(anyhow!("selenium browser field must be set"));
-        }
+        // browser field not used; assume tor tunnel will handle requests
         let client = Client::builder().build()?;
         Ok(SeleniumDriver { client, last_url: None })
     }

@@ -1,0 +1,29 @@
+{
+  "general": {
+    "url": "https://www.shufersal.co.il",
+    "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+    "max_retries": 3,
+    "timeout": 30
+  },
+  "selenium": {
+    "browser": "tor",
+    "headless": true,
+    "proxy": {
+      "enabled": true,
+      "host": "127.0.0.1",
+      "port": 9050
+    }
+  },
+  "database": {
+    "path": "data/shufersal_scraper.db",
+    "cache_size": 100
+  },
+  "scraping": {
+    "categories": ["dairy", "produce", "bakery"],
+    "scrape_interval": 60,
+    "concurrent_requests": 5
+  },
+  "tor": {
+    "enabled": true
+  }
+}
