@@ -27,7 +27,11 @@ if ! command -v cargo >/dev/null 2>&1; then
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
     export PATH="$HOME/.cargo/bin:$PATH"
     echo "restart your shell or run 'source $HOME/.cargo/env' to load cargo"
+    echo "# if you open a new terminal, remember to source that file again before using cargo"
 fi
+
+# source cargo
+source "$HOME/.cargo/env"
 
 # build the scraper
 cargo build --release
