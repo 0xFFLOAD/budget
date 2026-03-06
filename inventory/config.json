@@ -1,11 +1,12 @@
 {
   "general": {
-    "url": "https://www.shufersal.co.il/online/he",
+    "url": "https://wolt.com/{lang}/isr/tel-aviv/venue/wolt-market-herzliya",
     "max_retries": 3,
     "timeout": 30
   },
   "selenium": {
     "headless": true,
+    "browser": "safari",
     "proxy": {
       "enabled": true,
       "host": "127.0.0.1",

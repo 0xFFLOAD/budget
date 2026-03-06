@@ -35,6 +35,8 @@ fn write_json<T: Serialize>(path: &str, value: &T) -> Result<()> {
 // ------------------ configuration ------------------
 #[derive(Debug, Serialize, Deserialize)]
 struct GeneralConfig {
+    /// base URL or template; if it contains "{lang}" the scraper will
+    /// substitute each entry from `scraping.categories` for that token.
     url: String,
     max_retries: u32,
     timeout: u64,
@@ -88,7 +90,7 @@ impl Default for Config {
 
         Config {
             general: GeneralConfig {
-                url: "https://www.shufersal.co.il".to_string(),
+                url: "https://wolt.com/{lang}/isr/tel-aviv/venue/wolt-market-herzliya".to_string(),
                 max_retries: 3,
                 timeout: 30,
             },
@@ -106,7 +108,7 @@ impl Default for Config {
                 cache_size: 100,
             },
             scraping: ScrapingConfig {
-                categories: vec!["dairy".into(), "produce".into(), "bakery".into()],
+                categories: vec!["en".into(), "he".into()],
                 scrape_interval: 60,
                 concurrent_requests: 5,
             },
@@ -119,8 +121,13 @@ impl Config {
     fn load() -> Result<Self> {
         // try to read config.json if it exists
         let mut cfg = if let Ok(c) = read_json::<Config>("config.json") {
+            debug!("loaded configuration file");
             c
+        } else if let Err(e) = read_json::<Config>("config.json") {
+            warn!("could not read config.json: {} -- using default", e);
+            Config::default()
         } else {
+            // unreachable but satisfy exhaustiveness
             Config::default()
         };
 
@@ -237,7 +244,24 @@ impl SeleniumDriver {
         let resp = Client::new().get(&status_url).send()?;
         let json: serde_json::Value = resp.json()?;
         if !json["value"]["ready"].as_bool().unwrap_or(false) {
-            return Err(anyhow!("selenium server not ready at {}", status_url));
+            // Grid may report not ready if an existing session is still active;
+            // attempt to clear the stale session(s) before moving on.
+            warn!("selenium status endpoint returned not-ready: {}", json);
+            if let Some(nodes) = json["value"]["nodes"].as_array() {
+                for node in nodes {
+                    if let Some(slots) = node["slots"].as_array() {
+                        for slot in slots {
+                            if let Some(sess) = slot.get("session") {
+                                if let Some(sid) = sess.get("sessionId").and_then(|v| v.as_str()) {
+                                    warn!("deleting stale selenium session {}", sid);
+                                    let del_url = format!("{}/session/{}", base, sid);
+                                    let _ = Client::new().delete(&del_url).send();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         let mut builder = Client::builder();
@@ -266,6 +290,11 @@ impl SeleniumDriver {
             .send()?;
         let sess_json: serde_json::Value = sess_resp.json()?;
         debug!("webdriver new session response: {}", sess_json);
+        if let Some(msg) = sess_json["value"]["message"].as_str() {
+            if msg.contains("Allow remote automation") {
+                return Err(anyhow!("Safari remote automation appears disabled; enable 'Allow Remote Automation' under Develop -> Safari"));
+            }
+        }
         let session_id = sess_json["value"]["sessionId"]
             .as_str()
             .or_else(|| sess_json["sessionId"].as_str())
@@ -293,6 +322,7 @@ impl SeleniumDriver {
             .as_str()
             .context("no page source returned")?
             .to_string();
+        debug!("page source length {}", src.len());
         Ok(src)
     }
 
@@ -388,9 +418,19 @@ impl Scraper {
 
     fn run(&mut self) -> Result<()> {
         for cat in &self.cfg.scraping.categories {
-            let url = format!("{}/category/{}", self.cfg.general.url, cat);
+            // build target URL: template substitution if needed,
+            // otherwise append "/category/<cat>" as before.
+            let url = if self.cfg.general.url.contains("{lang}") {
+                self.cfg.general.url.replace("{lang}", cat)
+            } else if cat.starts_with("http") {
+                cat.clone()
+            } else {
+                format!("{}/category/{}", self.cfg.general.url, cat)
+            };
+            info!("navigating to {}", url);
             self.driver.navigate(&url)?;
             let products = self.driver.extract_products()?;
+            info!("{} products found for category {}", products.len(), cat);
             // early validation/serialization
             // ensure data directory exists
             let _ = fs::create_dir_all("data");

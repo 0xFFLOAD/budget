@@ -1,6 +1,7 @@
 # Quick Start
 
-Execute the following commands from the `inventory` directory.  Before running them start the required services:
+Execute the following commands *from the `inventory` directory* (or prefix them with `cd inventory &&`).
+Before running them start the required services:
 
 ```bash
 # start Tor (optional, see note below)
@@ -64,7 +65,9 @@ lsof -i TCP:9050
 # ask the proxy itself for a version string
 curl --socks5-hostname 127.0.0.1:9050 http://check.torproject.org/ 2>/dev/null | head -n1
 
-# run a scraping pass (Selenium must be running; Tor is optional)
+# run a scraping pass (***start the Selenium server first!***)
+# you will see the error "selenium server not ready at http://localhost:4444/status"
+# if you attempt to scrape without the server listening.
 # the browser used by Selenium is configurable – the default is `safari` on
 # macOS.  Chrome/Firefox are also supported if the appropriate WebDriver is
 # available and `SHUFER_Scraper_BROWSER` is set accordingly.
@@ -85,7 +88,11 @@ cargo run -- load-json data/dump.json
 > * a Selenium server is reachable at http://localhost:4444
 > * if you wish to use Tor, a daemon is running and listening on 127.0.0.1:9050
 >   (the scraper can operate without Tor but may expose your IP)
-> * the `general.url` in your config points to the correct locale, e.g.
->   "https://www.shufersal.co.il/online/he" for Hebrew pages
+> * the `general.url` in your config either points to a single site or
+>   serves as a template.  when it contains `{lang}` the scraper will insert
+>   each string from `scraping.categories` in its place – the default value
+>   is
+>   `"https://wolt.com/{lang}/isr/tel-aviv/venue/wolt-market-herzliya"`,
+>   which will visit both English and Hebrew variants.
 > * optionally, set `selenium.browser` in your JSON or
 >   `SHUFER_Scraper_BROWSER` env var (defaults to "safari").
