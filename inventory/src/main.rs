@@ -223,7 +223,7 @@ struct SeleniumDriver {
 }
 
 impl SeleniumDriver {
-    fn new(_cfg: &SeleniumConfig) -> Result<Self> {
+    fn new(cfg: &SeleniumConfig) -> Result<Self> {
         // simple connectivity check to local Selenium server
         let status_url = "http://localhost:4444/status";
         let resp = Client::new().get(status_url).send()?;
@@ -232,7 +232,14 @@ impl SeleniumDriver {
             return Err(anyhow!("selenium server not ready at {}", status_url));
         }
         // browser field not used; assume tor tunnel will handle requests
-        let client = Client::builder().build()?;
+        // set up HTTP client to go through the Tor proxy if enabled
+        let mut builder = Client::builder();
+        if cfg.proxy.enabled {
+            let proxy_url = format!("socks5://{}:{}", cfg.proxy.host, cfg.proxy.port);
+            debug!("using tor proxy at {}", proxy_url);
+            builder = builder.proxy(reqwest::Proxy::all(&proxy_url)?);
+        }
+        let client = builder.build()?;
         Ok(SeleniumDriver { client, last_url: None })
     }
 
@@ -292,6 +299,27 @@ impl SeleniumDriver {
                 id: None,
                 name,
                 price,
+                unit: String::new(),
+                category_id: 0,
+                last_updated: Utc::now().to_rfc3339(),
+            });
+        }
+        // if no products were found, return a placeholder to verify scraping
+        if products.is_empty() {
+            products.push(Product {
+                id: None,
+                name: "<no-products-detected>".to_string(),
+                price: 0.0,
+                unit: String::new(),
+                category_id: 0,
+                last_updated: Utc::now().to_rfc3339(),
+            });
+        }
+        if products.is_empty() {
+            products.push(Product {
+                id: None,
+                name: "<no-products-found>".to_string(),
+                price: 0.0,
                 unit: String::new(),
                 category_id: 0,
                 last_updated: Utc::now().to_rfc3339(),
